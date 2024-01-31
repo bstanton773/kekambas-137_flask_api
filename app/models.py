@@ -16,7 +16,8 @@ class User(db.Model):
     date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     posts = db.relationship('Post', backref='author')
     token = db.Column(db.String(32), index = True, unique=True)
-    token_expiration = db.Column(db.DateTime) 
+    token_expiration = db.Column(db.DateTime)
+    comments = db.relationship('Comment', backref='user') 
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -81,6 +82,7 @@ class Post(db.Model):
     date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     # In SQL - user_id INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES user(id)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comments = db.relationship("Comment", backref='post')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -113,4 +115,36 @@ class Post(db.Model):
             "dateCreated": self.date_created,
             "userId": self.user_id,
             "author": self.author.to_dict(),
+        }
+
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.String,nullable=False)
+    date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey("post.id"), nullable= False)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.save()
+
+    def __repr__(self):
+        return f'<Comment {self.id}>'
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def to_dict(self):
+        return{
+            "id": self.id,
+            "body": self.body,
+            "dateCreated": self.date_created,
+            "post_id": self.post_id,
+            "user": self.user.to_dict()
         }

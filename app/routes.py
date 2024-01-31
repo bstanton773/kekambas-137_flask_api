@@ -1,7 +1,7 @@
 from flask import request
 from app import app, db
 from fake_data.posts import post_data
-from app.models import User, Post
+from app.models import User, Post, Comment
 from app.auth import basic_auth, token_auth
 
 # # We will setup DB later, for now we will store all new users in this list
@@ -199,3 +199,60 @@ def delete_post(post_id):
     # delete post
     post.delete()
     return {"success":f"{post.title} has been deleted!"}
+
+#COMMENT ROUTES
+
+
+#make a comment
+@app.route("/posts/<int:post_id>/comments", methods=["POST"])
+@token_auth.login_required
+def create_comment(post_id):
+    # check make sure its a valid request
+    if not request.is_json:
+        return {"error":"Your content-type is not application/json"}, 400
+    # get the post they want to comment on
+    post = db.session.get(Post, post_id)
+    # make sure post exists
+    if post is None:
+        return {"error":f'post with the id of {post_id} cannot be found! Please try again'}, 404
+    # get the data from the user to create the comment
+    data = request.json
+    # validate data
+    required_fields = ["body"]
+    missing_fields = []
+    for field in required_fields:
+        if field not in data:
+            missing_fields(field)
+    if missing_fields:
+        return {"error": f" {' '.join(missing_fields)} must be in the request body!"}, 400
+    # pull body data
+    body = data.get('body')
+    # get the logged in users token so we know who commented
+    current_user = token_auth.current_user()
+    new_comment = Comment(body = body, user_id = current_user.id, post_id = post.id)
+    return new_comment.to_dict(), 201
+
+
+
+#delete a comment
+@app.route('/posts/<int:post_id>/comments/<int:comment_id>', methods=['DELETE'])
+@token_auth.login_required
+def delete_comment(post_id, comment_id):
+    #get the post based on post id
+    post = db.session.get(Post,post_id)
+    # check if the post exists
+    if post is None:
+        return {"error" :f"Post with the id {post_id} not found!"}, 404
+    # get the comment based off comment id
+    comment = db.session.get(Comment, comment_id)
+    # check if comment exists
+    if comment is None:
+        return {"error":f"Comment with the id of {comment_id} does not exist!"},404
+    # get the logged in user based on the token
+    current_user = token_auth.current_user()
+    # check to see if the comment belongs to the logged in user
+    if comment.user is not current_user:
+        return {"error":"You cannot delete what isn't yours! "}, 403
+    # Delete the comment
+    comment.delete()
+    return {"success":"comment deleted!"}
