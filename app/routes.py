@@ -108,6 +108,12 @@ def get_user(user_id):
     else:
         return {"error":f" user with id:{user_id} not found"}, 404
 
+@app.route('/users/me')
+@token_auth.login_required
+def get_me():
+    current_user = token_auth.current_user()
+    return current_user.to_dict()
+
 # POST ENDPOINTS
 
 # Get all posts
