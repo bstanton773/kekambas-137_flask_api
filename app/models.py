@@ -146,6 +146,6 @@ class Comment(db.Model):
             "id": self.id,
             "body": self.body,
             "dateCreated": self.date_created,
-            "post_id": self.post_id,
+            "postId": self.post_id,
             "user": self.user.to_dict()
         }
